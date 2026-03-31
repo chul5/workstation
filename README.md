@@ -72,16 +72,16 @@ touch mvTest
 ### 권한 실습 및 증거 기록
 ```
 # 1. 파일 변경 전 권한
-ls -l hello
+$ ls -l hello
 -rw-r--r--  1 och54055405  och54055405  12 Mar 31 20:18 hello
 
 # 2. 파일 변경 후 권한
-chmod 755 hello 
-ls -l hello    
+$ chmod 755 hello 
+$ ls -l hello    
 -rwxr-xr-x  1 och54055405  och54055405  12 Mar 31 20:18 hello
 
 # 3. 디렉터리 변경 전 권한
-ls -l 
+$ ls -l 
 total 24
 -rw-r--r--  1 och54055405  och54055405  2780 Mar 31 19:53 README.md
 -rwxr-xr-x  1 och54055405  och54055405    12 Mar 31 20:18 hello
@@ -89,8 +89,8 @@ total 24
 drwxr-xr-x  3 och54055405  och54055405    96 Mar 31 20:37 workStation
 
 # 4. 디렉터리 변경 후 권한
-chmod 777 workStation 
-ls -l 
+$ chmod 777 workStation 
+$ ls -l 
 total 24
 -rw-r--r--  1 och54055405  och54055405  2780 Mar 31 19:53 README.md
 -rwxr-xr-x  1 och54055405  och54055405    12 Mar 31 20:18 hello
