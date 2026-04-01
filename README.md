@@ -15,7 +15,7 @@
 - [x] 파일 및 디렉토리 권한 변경 실습 (644/755/777)
 - [x] Docker 설치 및 기본 환경 점검 (`docker info`)
 - [x] Docker 기본 운영 명령 수행
-- [ ] Docker 컨테이너 실행 실습 (hello-world / ubuntu)
+- [x] Docker 컨테이너 실행 실습 (hello-world / ubuntu)
 - [ ] Dockerfile 기반 커스텀 웹 서버 이미지 제작
 - [ ] 포트 매핑 및 브라우저 접속 확인
 - [ ] Docker 볼륨을 이용한 데이터 영속성 검증
@@ -324,7 +324,85 @@ CONTAINER ID   NAME      CPU %     MEM USAGE / LIMIT     MEM %     NET I/O      
 
 ### 4.5 컨테이너 실행 실습
 ```bash
+# 1. docker run hello-world
+$ docker run hello-world
 
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+
+To generate this message, Docker took the following steps:
+ 1. The Docker client contacted the Docker daemon.
+ 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+    (amd64)
+ 3. The Docker daemon created a new container from that image which runs the
+    executable that produces the output you are currently reading.
+ 4. The Docker daemon streamed that output to the Docker client, which sent it
+    to your terminal.
+
+To try something more ambitious, you can run an Ubuntu container with:
+ $ docker run -it ubuntu bash
+
+Share images, automate workflows, and more with a free Docker ID:
+ https://hub.docker.com/
+
+For more examples and ideas, visit:
+ https://docs.docker.com/get-started/
+
+# 2. ubuntu container 실행
+$ docker run -it --name my-ubuntu ubuntu bash
+Unable to find image 'ubuntu:latest' locally
+latest: Pulling from library/ubuntu
+817807f3c64e: Pull complete 
+Digest: sha256:186072bba1b2f436cbb91ef2567abca677337cfc786c86e107d25b7072feef0c
+Status: Downloaded newer image for ubuntu:latest
+root@57d3a216e699:/#
+
+root@57d3a216e699:/# ls
+bin   dev  home  lib64  mnt  proc  run   srv  tmp  var
+boot  etc  lib   media  opt  root  sbin  sys  usr
+root@57d3a216e699:/# echo hello 
+hello
+
+# 3. container 종료/유지 (attach, exec)
+# exit: 컨테이너를 완전히 끄고 밖으로 나감. (프로세스 종료)
+root@57d3a216e699:/# exit 
+exit
+
+$ docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS     NAMES
+0c269420e2e5   nginx     "/docker-entrypoint.…"   10 minutes ago   Up 10 minutes   80/tcp    my-web
+
+$ docker ps -a
+CONTAINER ID   IMAGE         COMMAND                  CREATED          STATUS                      PORTS     NAMES
+57d3a216e699   ubuntu        "bash"                   3 minutes ago    Exited (0) 35 seconds ago             my-ubuntu
+8f11bf0bf0e9   hello-world   "/hello"                 5 minutes ago    Exited (0) 5 minutes ago              elated_roentgen
+0c269420e2e5   nginx         "/docker-entrypoint.…"   11 minutes ago   Up 11 minutes               80/tcp    my-web
+32c542051de7   hello-world   "/hello"                 12 minutes ago   Exited (0) 12 minutes ago             eloquent_heisenberg
+
+$ docker start my-ubuntu
+my-ubuntu
+
+# 실행중인 메인 쉘에 접속
+$ docker attach my-ubuntu
+root@57d3a216e699:/#
+root@57d3a216e699:/# exit
+exit
+
+$ docker start my-ubuntu
+my-ubuntu
+
+# 새로운 쉘을 프로세스 생성
+$ docker exec -it my-ubuntu bash
+root@57d3a216e699:/# 
+root@57d3a216e699:/# exit
+exit
+
+$ docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS     NAMES
+57d3a216e699   ubuntu    "bash"                   19 minutes ago   Up 51 seconds             my-ubuntu
+0c269420e2e5   nginx     "/docker-entrypoint.…"   27 minutes ago   Up 27 minutes   80/tcp    my-web
+
+"실습 결과, attach는 컨테이너의 메인 스트림에 연결되어 exit 시 컨테이너가 함께 종료되는 위험이 있었으나, exec은 독립적인 프로세스를 실행하므로 작업 후 안전하게 빠져나올 수 있었다. 실제 운영 환경에서는 컨테이너의 안정성을 위해 exec을 주로 사용하는 것이 바람직해 보인다."
 ```
 ### 4.6 기존 Dockerfile 기반 커스텀 이미지 제작
 ### 4.7 포트 매핑 및 접속 증거
