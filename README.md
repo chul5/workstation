@@ -16,8 +16,8 @@
 - [x] Docker 설치 및 기본 환경 점검 (`docker info`)
 - [x] Docker 기본 운영 명령 수행
 - [x] Docker 컨테이너 실행 실습 (hello-world / ubuntu)
-- [ ] Dockerfile 기반 커스텀 웹 서버 이미지 제작
-- [ ] 포트 매핑 및 브라우저 접속 확인
+- [x] Dockerfile 기반 커스텀 웹 서버 이미지 제작
+- [x] 포트 매핑 및 브라우저 접속 확인
 - [ ] Docker 볼륨을 이용한 데이터 영속성 검증
 - [x] Git 사용자 설정 및 GitHub 원격 저장소 연동
 
@@ -368,10 +368,6 @@ hello
 root@57d3a216e699:/# exit 
 exit
 
-$ docker ps
-CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS     NAMES
-0c269420e2e5   nginx     "/docker-entrypoint.…"   10 minutes ago   Up 10 minutes   80/tcp    my-web
-
 $ docker ps -a
 CONTAINER ID   IMAGE         COMMAND                  CREATED          STATUS                      PORTS     NAMES
 57d3a216e699   ubuntu        "bash"                   3 minutes ago    Exited (0) 35 seconds ago             my-ubuntu
@@ -391,22 +387,109 @@ exit
 $ docker start my-ubuntu
 my-ubuntu
 
-# 새로운 쉘을 프로세스 생성
+# 새로운 쉘의 프로세스 생성
 $ docker exec -it my-ubuntu bash
 root@57d3a216e699:/# 
 root@57d3a216e699:/# exit
 exit
 
 $ docker ps
-CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS     NAMES
-57d3a216e699   ubuntu    "bash"                   19 minutes ago   Up 51 seconds             my-ubuntu
-0c269420e2e5   nginx     "/docker-entrypoint.…"   27 minutes ago   Up 27 minutes   80/tcp    my-web
+CONTAINER ID   IMAGE     COMMAND   CREATED         STATUS         PORTS     NAMES
+06f5c3740e64   ubuntu    "bash"    9 minutes ago   Up 8 minutes             my-ubuntu
 
 "실습 결과, attach는 컨테이너의 메인 스트림에 연결되어 exit 시 컨테이너가 함께 종료되는 위험이 있었으나, exec은 독립적인 프로세스를 실행하므로 작업 후 안전하게 빠져나올 수 있었다. 실제 운영 환경에서는 컨테이너의 안정성을 위해 exec을 주로 사용하는 것이 바람직해 보인다."
+
+# docker 종료
+$ docker stop my-ubuntu
+my-ubuntu
+
+$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 ```
 ### 4.6 기존 Dockerfile 기반 커스텀 이미지 제작
+
+#### src디렉터리 생성 및 index.html생성
+```bash
+mkdir src
+echo "<h1>Welcome to My Docker Station</h1><p>Created by [cody]</p>" > src/index.html
+```
+#### dockerfile 기반 커스텀 이미지 빌드
+```bash
+# 1. Base image setting.
+FROM nginx:alpine
+
+# 2. 이미지에 대한 정보 기록
+LABEL maintainer="cody"
+LABEL description="Custom Nginx Web Server for Mission"
+
+# 3. Host의 src폴더 안에 있는 index.html을 nginx컨테이너 웹 경로로 복사
+COPY src/index.html /usr/share/nginx/html/index.html
+```
+#### dockerfile 빌드를 통한 커스텀 이미지 생성
+```bash
+$ docker build -t my-web-site:1.0 .
+[+] Building 7.9s (7/7) FINISHED                                                                                            docker:orbstack
+ => [internal] load build definition from Dockerfile                                                                                   0.2s
+ => => transferring dockerfile: 404B                                                                                                   0.0s
+ => [internal] load metadata for docker.io/library/nginx:alpine                                                                        2.8s
+ => [internal] load .dockerignore                                                                                                      0.2s
+ => => transferring context: 2B                                                                                                        0.0s
+ => [internal] load build context                                                                                                      0.2s
+ => => transferring context: 130B                                                                                                      0.0s
+ => [1/2] FROM docker.io/library/nginx:alpine@sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203cd34cf6d1                  3.8s
+ => => resolve docker.io/library/nginx:alpine@sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203cd34cf6d1                  0.2s
+ => => sha256:d5030d429039a823bef4164df2fad7a0defb8d00c98c1136aec06701871197c2 12.32kB / 12.32kB                                       0.0s
+ => => sha256:e7257f1ef28ba17cf7c248cb8ccf6f0c6e0228ab9c315c152f9c203cd34cf6d1 10.33kB / 10.33kB                                       0.0s
+ => => sha256:7e89aa6cabfc80f566b1b77b981f4bb98413bd2d513ca9a30f63fe58b4af6903 2.50kB / 2.50kB                                         0.0s
+ => => sha256:8892f80f46a05d59a4cde3bcbb1dd26ed2441d4214870a4a7b318eaa476a0a54 1.87MB / 1.87MB                                         0.5s
+ => => sha256:589002ba0eaed121a1dbf42f6648f29e5be55d5c8a6ee0f8eaa0285cc21ac153 3.86MB / 3.86MB                                         1.0s
+ => => sha256:91d1c9c22f2c631288354fadb2decc448ce151d7a197c167b206588e09dcd50a 626B / 626B                                             0.8s
+ => => sha256:cf1159c696ee2a72b85634360dbada071db61bceaad253db7fda65c45a58414c 953B / 953B                                             1.0s
+ => => sha256:3f4ad4352d4f91018e2b4910b9db24c08e70192c3b75d0d6fff0120c838aa0bb 402B / 402B                                             1.3s
+ => => extracting sha256:589002ba0eaed121a1dbf42f6648f29e5be55d5c8a6ee0f8eaa0285cc21ac153                                              0.1s
+ => => sha256:c2bd5ab177271dd59f19a46c214b1327f5c428cd075437ec0155ae71d0cdadc1 1.21kB / 1.21kB                                         1.5s
+ => => extracting sha256:8892f80f46a05d59a4cde3bcbb1dd26ed2441d4214870a4a7b318eaa476a0a54                                              0.1s
+ => => sha256:4d9d41f3822d171ccc5f2cdfd75ad846ac4c7ed1cd36fb998fe2c0ce4501647b 1.40kB / 1.40kB                                         1.5s
+ => => extracting sha256:91d1c9c22f2c631288354fadb2decc448ce151d7a197c167b206588e09dcd50a                                              0.0s
+ => => extracting sha256:cf1159c696ee2a72b85634360dbada071db61bceaad253db7fda65c45a58414c                                              0.0s
+ => => sha256:3370263bc02adcf5c4f51831d2bf1d54dbf9a6a80b0bf32c5c9b9400630eaa08 20.25MB / 20.25MB                                       2.1s
+ => => extracting sha256:3f4ad4352d4f91018e2b4910b9db24c08e70192c3b75d0d6fff0120c838aa0bb                                              0.0s
+ => => extracting sha256:c2bd5ab177271dd59f19a46c214b1327f5c428cd075437ec0155ae71d0cdadc1                                              0.0s
+ => => extracting sha256:4d9d41f3822d171ccc5f2cdfd75ad846ac4c7ed1cd36fb998fe2c0ce4501647b                                              0.0s
+ => => extracting sha256:3370263bc02adcf5c4f51831d2bf1d54dbf9a6a80b0bf32c5c9b9400630eaa08                                              0.4s
+ => [2/2] COPY src/index.html /usr/share/nginx/html/index.html                                                                         0.3s
+ => exporting to image                                                                                                                 0.2s
+ => => exporting layers                                                                                                                0.1s
+ => => writing image sha256:0cf1ecbf3a8e07150e6697422753803f2d72c4c3be5b746c5d306202ee908d53                                           0.0s
+ => => naming to docker.io/library/my-web-site:1.0                                                                                     0.0s
+```
+#### 생성된 커스텀 이미지 실행
+해시 값은 컨테이너 ID
+```bash
+$ docker run -d -p 8080:80 --name my-custom-server my-web-site:1.0
+5c99484cf1a4665e8a15f22f22fbf64760af7c27e71205eeb9b066225cb4b135
+
+```
+#### 정리
+- 기존 베이스 이미지: nginx:alpine 경량화를 위하여 선택.
+- 커스텀 포인트
+   - LABEL 추가: 이미지의 목적과 작성자 명시.
+   - COPY: 기본 페이지를 커스텀 index.html로 교체.
+- 빌드/실행 명령 + 핵심 결과(출력/스크린샷)
+
 ### 4.7 포트 매핑 및 접속 증거
+```bash
+$ curl localhost:8080
+<h1>Welcome to My Docker Station</h1><p>Created by [cody]</p>
+
+$ docker port my-custom-server
+80/tcp -> 0.0.0.0:8080
+80/tcp -> [::]:8080
+```
+<img src="./image/포트매핑접속증거.png">
+
 ### Docker 볼륨 영속성 검증
+
 ### Git 설정 및 GitHub 연동
 
 ## 5. 트러블슈팅 (Troubleshooting)
