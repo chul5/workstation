@@ -488,7 +488,38 @@ $ docker port my-custom-server
 ```
 <img src="./image/포트매핑접속증거.png">
 
-### Docker 볼륨 영속성 검증
+### Docker Bind Mount반영 및 볼륨 영속성 검증
+#### 1. 바인드 마운트: 실행명령 + 호스트 변경 전/후 비교
+호스트 변경 전
+```bash
+$ mkdir bindTest
+$ echo '<h1>Hello from Bind Mount!</h1>' > $(pwd)/bindTest/index.html
+$ docker run -d \
+  --name my-web-container \
+  -p 8080:80 \
+  -v $(pwd)/bindTest:/usr/share/nginx/html \
+  my-web-site:1.0
+$ curl localhost:8080
+```
+출력
+```bash
+<h1>Hello from Bind Mount!</h1>
+```
+호스트 변경 후
+```bash
+$ echo '<h1>Updated from Host!</h1>' > $(pwd)/bindTest/index.html
+$ curl localhost:8080
+```
+출력
+```
+<h1>Updated from Host!</h1>
+```
+
+#### 2. Docker 볼륨 : 생성/연결/검증 + 컨테이너 삭제 전/후 비교
+```bash
+
+```
+#### 2. 출력
 
 ### Git 설정 및 GitHub 연동
 
