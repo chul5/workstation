@@ -570,6 +570,8 @@ branch.main.remote=origin
 branch.main.merge=refs/heads/main
 branch.main.vscode-merge-base=origin/main
 ```
+
+<img src="./image/깃허브연동증거.png">
 ## 5. 트러블슈팅 (Troubleshooting)
 1) GitHub Push 인증 오류 (Password Auth)
 
