@@ -18,7 +18,7 @@
 - [x] Docker 컨테이너 실행 실습 (hello-world / ubuntu)
 - [x] Dockerfile 기반 커스텀 웹 서버 이미지 제작
 - [x] 포트 매핑 및 브라우저 접속 확인
-- [ ] Docker 볼륨을 이용한 데이터 영속성 검증
+- [x] Docker 볼륨을 이용한 데이터 영속성 검증
 - [x] Git 사용자 설정 및 GitHub 원격 저장소 연동
 
 ---
@@ -500,29 +500,76 @@ $ docker run -d \
   -v $(pwd)/bindTest:/usr/share/nginx/html \
   my-web-site:1.0
 $ curl localhost:8080
-```
-출력
-```bash
 <h1>Hello from Bind Mount!</h1>
 ```
+
 호스트 변경 후
 ```bash
 $ echo '<h1>Updated from Host!</h1>' > $(pwd)/bindTest/index.html
 $ curl localhost:8080
-```
-출력
-```
 <h1>Updated from Host!</h1>
 ```
 
 #### 2. Docker 볼륨 : 생성/연결/검증 + 컨테이너 삭제 전/후 비교
 ```bash
+# 1. my-data-volume이름의 volume 생성
+$ docker volume create my-data-volume
+my-data-volume
 
+# 2. Container 에 my-data-volume 볼륨 연결
+$ docker run -d \
+   --name my-volume-container \
+   -v my-data-volume:/usr/share/nginx/html \
+   my-web-site:1.0
+
+# 3. container 의 index.html변경
+# 3-1 기존 index.html
+$ docker exec my-volume-container sh -c "cat /usr/share/nginx/html/index.html"
+$ <h1>Welcome to My Docker Station</h1><p>Created by [cody]</p>
+
+# 3-2 index.html 변경
+$ docker exec my-volume-container sh -c "
+  echo '<h1>Data in Volume</h1>' > /usr/share/nginx/html/index.html
+"
+
+$ docker exec my-volume-container sh -c "cat /usr/share/nginx/html/index.html"
+<h1>Data in Volume</h1>
+
+# 4. docker 컨테이너 중단 및 삭제
+$ docker stop my-volume-container
+my-volume-container
+$ docker rm my-volume-container
+my-volume-container
+
+# 5. 새로운 컨테이너를 my-data-volume 볼륨에 연결
+$ docker run -d \
+  --name my-volume-container-2 \
+  -v my-data-volume:/usr/share/nginx/html \
+  my-web-site:1.0
+
+# 6. 볼륨 데이터 이전 데이터가 유지되는지 확인
+$ docker exec my-volume-container-2 sh -c "cat /usr/share/nginx/html/index.html"
+<h1>Data in Volume</h1>
 ```
-#### 2. 출력
 
 ### Git 설정 및 GitHub 연동
-
+```bash
+$ git config --list
+credential.helper=osxkeychain
+user.name=cody
+user.email=och5405@naver.com
+core.repositoryformatversion=0
+core.filemode=true
+core.bare=false
+core.logallrefupdates=true
+core.ignorecase=true
+core.precomposeunicode=true
+remote.origin.url=https://github.com/chul5/workstation.git
+remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+branch.main.remote=origin
+branch.main.merge=refs/heads/main
+branch.main.vscode-merge-base=origin/main
+```
 ## 5. 트러블슈팅 (Troubleshooting)
 1) GitHub Push 인증 오류 (Password Auth)
 
