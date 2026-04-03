@@ -554,6 +554,11 @@ $ docker exec my-volume-container-2 sh -c "cat /usr/share/nginx/html/index.html"
 
 ### Git 설정 및 GitHub 연동
 ```bash
+$ git config --global user.name "cody"
+$ git config --global user.email "och5405@naver.com"
+$ git config --global init.defaultBranch main
+$ git remote set-url origin https://github.com/chul5/workstation.git
+
 $ git config --list
 credential.helper=osxkeychain
 user.name=cody
