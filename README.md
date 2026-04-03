@@ -20,6 +20,7 @@
 - [x] 포트 매핑 및 브라우저 접속 확인
 - [x] Docker 볼륨을 이용한 데이터 영속성 검증
 - [x] Git 사용자 설정 및 GitHub 원격 저장소 연동
+- [ ] Bonus
 
 ---
 
@@ -488,7 +489,7 @@ $ docker port my-custom-server
 ```
 <img src="./image/포트매핑접속증거.png">
 
-### Docker Bind Mount반영 및 볼륨 영속성 검증
+### 4.8 Docker Bind Mount반영 및 볼륨 영속성 검증
 #### 1. 바인드 마운트: 실행명령 + 호스트 변경 전/후 비교
 호스트 변경 전
 ```bash
@@ -552,7 +553,7 @@ $ docker exec my-volume-container-2 sh -c "cat /usr/share/nginx/html/index.html"
 <h1>Data in Volume</h1>
 ```
 
-### Git 설정 및 GitHub 연동
+### 4.9 Git 설정 및 GitHub 연동
 ```bash
 $ git config --global user.name "cody"
 $ git config --global user.email "och5405@naver.com"
@@ -577,6 +578,10 @@ branch.main.vscode-merge-base=origin/main
 ```
 
 <img src="./image/깃허브연동증거.png">
+
+### 4.10 Bonus
+
+
 ## 5. 트러블슈팅 (Troubleshooting)
 1) GitHub Push 인증 오류 (Password Auth)
 
