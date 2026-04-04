@@ -635,7 +635,131 @@ branch.main.vscode-merge-base=origin/main
 <img src="./image/깃허브연동증거.png">
 
 ### 4.10 Bonus
+#### 1. Docker Compose 기초
+docker-compose.yml의 기본 구조를 학습하고, 단일 서비스를 Compose로 실행한다.
+배움 포인트: 컨테이너 실행 명령이 “문서화된 실행 설정”으로 바뀌는 이유
+##### docker-compose.yml
+```bash
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    container_name: my-web-server
+```
+##### 단일 서비스 실행
+```bash
+$ docker compose up -d
+[+] Running 2/2
+ ✔ Network workstation_default  Created                                                                 0.1s 
+ ✔ Container my-web-server      Started                                                                 0.4s 
 
+$ docker compose ps
+NAME            IMAGE          COMMAND                  SERVICE   CREATED          STATUS          PORTS
+my-web-server   nginx:alpine   "/docker-entrypoint.…"   web       23 seconds ago   Up 23 seconds   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+
+$ docker compose down
+[+] Running 2/2
+ ✔ Container my-web-server      Removed                                                                 0.3s 
+ ✔ Network workstation_default  Removed                                                                 0.1s 
+```
+##### 핵심이해
+docker run 명령 = 매번 길게 입력해야 함
+docker-compose.yml = 설정을 파일로 저장 → 재사용 가능, 팀과 공유 가능
+
+#### 2. Docker compost Multi Containers
+웹 서버 + (임의의 보조 서비스) 2개 이상을 Compose로 함께 실행한다.
+컨테이너 간 네트워크 통신이 가능한지 확인한다.
+배움 포인트: 네트워크/서비스 디스커버리 개념 맛보기
+
+##### docker-compose.yml
+```bash
+
+```
+
+##### Network 통신 확인
+```bash
+$ docker compose up -d
+[+] Running 12/12
+ ✔ db Pulled                                                                                                                       10.4s 
+   ✔ 2d35ebdb57d9 Pull complete                                                                                                     1.1s 
+   ✔ a64d9570aeee Pull complete                                                                                                     1.2s 
+   ✔ 191ad9697389 Pull complete                                                                                                     1.2s 
+   ✔ dbb6b142b9ce Pull complete                                                                                                     1.8s 
+   ✔ 4f08f7c06c53 Pull complete                                                                                                     1.9s 
+   ✔ 14981f3a93ca Pull complete                                                                                                     6.7s 
+   ✔ 74c6de8827e1 Pull complete                                                                                                     6.8s 
+   ✔ e62b4937bf7f Pull complete                                                                                                     6.9s 
+   ✔ 0e6c5d8eab6d Pull complete                                                                                                     7.0s 
+   ✔ fe7ec1f85969 Pull complete                                                                                                     7.0s 
+   ✔ a8d05d343dd2 Pull complete                                                                                                     7.1s 
+[+] Running 4/4
+ ✔ Network workstation_app-network  Created                                                                                         0.1s 
+ ✔ Volume workstation_db-data       Created                                                                                         0.0s 
+ ✔ Container workstation-db-1       Started                                                                                         0.8s 
+ ✔ Container workstation-web-1      Started                                                                                         0.6s
+
+# nginx 컨테이너에서 bash로 db 컨테이너에 접근 테스트 
+$ docker-compose exec web bash
+root@3bd17d70d7b7:/# apt update && apt install -y iputils-ping && ping db -c4
+PING db (192.168.97.2) 56(84) bytes of data.
+64 bytes from workstation-db-1.workstation_app-network (192.168.97.2): icmp_seq=1 ttl=64 time=0.051 ms
+64 bytes from workstation-db-1.workstation_app-network (192.168.97.2): icmp_seq=2 ttl=64 time=0.048 ms
+64 bytes from workstation-db-1.workstation_app-network (192.168.97.2): icmp_seq=3 ttl=64 time=0.051 ms
+64 bytes from workstation-db-1.workstation_app-network (192.168.97.2): icmp_seq=4 ttl=64 time=0.051 ms
+
+--- db ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3079ms
+rtt min/avg/max/mdev = 0.048/0.050/0.051/0.001 ms
+```
+
+##### 핵심이해
+서비스 디스커버리: db라는 이름으로 자동 DNS 해석
+같은 networks에 있으면 자동으로 통신 가능
+
+#### 3. Compost 운영 명령어
+up, down, ps, logs를 사용해 실행/종료/상태/로그를 관리한다.
+배움 포인트: 운영 관점의 “상태 확인 루틴” 만들기
+
+##### 명령어 정리
+```bash
+# 1) 실행 (백그라운드)
+docker-compose up -d
+
+# 2) 상태 확인
+docker-compose ps
+
+# 3) 로그 확인
+docker-compose logs web          # web 서비스만
+docker-compose logs -f           # 실시간 로그 (Ctrl+C로 종료)
+...
+web-1  | 2026/04/04 11:17:27 [notice] 1#1: start worker process 33
+web-1  | 2026/04/04 11:17:27 [notice] 1#1: start worker process 34
+web-1  | 2026/04/04 11:25:41 [notice] 1#1: signal 17 (SIGCHLD) received from 107
+web-1  | 2026/04/04 11:25:41 [notice] 1#1: unknown process 107 exited with code 0
+...
+
+# 4) 특정 컨테이너 접속
+docker-compose exec db psql -U postgres
+psql (13.23)
+Type "help" for help.
+
+postgres=#
+
+# 5) 종료 (컨테이너 삭제)
+docker-compose down
+
+# 6) 종료 (볼륨도 삭제)
+docker-compose down -v
+```
+
+#### 4. 환경 변수 활용
+Dockerfile 또는 Compose에서 환경 변수를 주입해 서버 포트/모드를 바꿔본다.
+배움 포인트: 설정과 코드의 분리
+
+#### 5. Github SSH키 설정
+HTTPS 대신 SSH로 푸시가 가능하도록 키를 등록하고 동작을 확인한다.
+배움 포인트: 인증 방식 차이와 보안 습관
 
 ## 5. 트러블슈팅 (Troubleshooting)
 1) GitHub Push 인증 오류 (Password Auth)
