@@ -16,7 +16,7 @@
 ## 2. 실행 환경
 - **OS**: macOS (Apple Silicon)
 - **Shell**: zsh
-- **Terminal**: VSCode Terminal / iTerm2
+- **Terminal**: VSCode Terminal
 - **Docker**: 28.5.2 (OrbStack 환경)
 - **Git**: 2.53.0
 
@@ -107,6 +107,9 @@ drwxr-xr-x  5 och54055405  och54055405  160 Apr  1 20:23 ..
 
 ```
 ### 4.2 권한실습 및 증거기록
+- r(4), w(2), x(1)의 합으로 표기함.
+- 755: 소유자(rwx=7), 그룹/기타(rx=5). 실행 파일이나 디렉터리에 주로 사용.
+- 644: 소유자(rw=6), 그룹/기타(r=4). 일반 텍스트 파일에 주로 사용.
 ```bash
 # 1. 파일 변경 전 권한
 $ ls -al hello1
@@ -242,6 +245,9 @@ Server:
 WARNING: DOCKER_INSECURE_NO_IPTABLES_RAW is set
 ```
 ### 4.4 Docker 기본 운영 명령 수행
+- 이미지 vs 컨테이너 차이
+   - 이미지(Image): 서비스 실행에 필요한 모든 파일과 설정을 압축한 '불변의 설계도(Read-Only)'.
+   - 컨테이너(Container): 이미지를 실행한 '격리된 프로세스'. 컨테이너에서 변경된 사항은 이미지에 영향을 주지 않음.
 ```bash
 # 1. docker pull
 $ docker pull nginx
@@ -434,9 +440,12 @@ LABEL maintainer="cody"
 LABEL description="Custom Nginx Web Server for Mission"
 
 # 3. Host의 src폴더 안에 있는 index.html을 nginx컨테이너 웹 경로로 복사
-COPY src/index.html /usr/share/nginx/html/index.html
+COPY /Users/och54055405/workstation/src/index.html /usr/share/nginx/html/index.html
 ```
 #### dockerfile 빌드를 통한 커스텀 이미지 생성
+- 상대 경로: 프로젝트 내부 파일을 참조할 때 사용하며, 프로젝트 폴더 위치가 바뀌어도 동작해야 하므로 이식성이 높음 (예: $ docker build -t my-web-site:1.0 . )
+- 절대 경로: 시스템의 고정된 위치를 참조할 때나 Docker 실행 시 호스트의 전체 경로를 명시해야 할 때 사용함 (예: $ cp /Users/och54055405/workstation/src/index.html /usr/share/nginx/html/index.html).
+
 ```bash
 $ docker build -t my-web-site:1.0 .
 [+] Building 7.9s (7/7) FINISHED                                                                                            docker:orbstack
@@ -489,6 +498,8 @@ $ docker run -d -p 8080:80 --name my-custom-server my-web-site:1.0
 - 빌드/실행 명령 + 핵심 결과(출력/스크린샷)
 
 ### 4.7 포트 매핑 및 접속 증거
+컨테이너는 격리된 네트워크 안에서 존재하므로, 호스트에서는 컨테이너 내부 포트에 직접 접속할 수 없어서 호스트의 포트와 컨테이너의 포트를 연결하는 통로가 필요함.
+포트 매핑의 재현성:8080:80 설정을 통해 어떤 환경(Mac, Linux, Windows)에서든 개발자는 동일하게 localhost:8080으로 서비스에 접속할 수 있음을 보장함.
 ```bash
 $ curl localhost:8080
 <h1>Welcome to My Docker Station</h1><p>Created by [cody]</p>
@@ -500,6 +511,7 @@ $ docker port my-custom-server
 <img src="./image/포트매핑접속증거.png">
 
 ### 4.8 Docker Bind Mount반영 및 볼륨 영속성 검증
+볼륨/마운트의 재현성: 소스코드는 호스트(bindTest)에 두고 실행 환경만 컨테이너를 사용함으로써, 컨테이너를 새로 띄워도 개발자가 수정하던 코드가 즉시 반영되는 환경을 구축함.
 #### 1. 바인드 마운트: 실행명령 + 호스트 변경 전/후 비교
 호스트 변경 전
 ```bash
@@ -596,7 +608,17 @@ branch.main.vscode-merge-base=origin/main
 1) GitHub Push 인증 오류 (Password Auth)
 
 문제: git push 시 비밀번호 인증 실패 (support for password authentication was removed).
-
 원인: GitHub 보안 정책으로 비밀번호 대신 PAT(Token) 사용이 필수임.
-
 해결: Settings > Developer settings에서 PAT(classic)를 생성하여 비밀번호 대신 입력함.
+
+2) docker port충돌 문제
+문제: docker run 실행 시 Bind for 0.0.0.0:8080 failed: port is already allocated 오류 발생.
+가설: 기존에 실행 중인 my-web 컨테이너가 8080 포트를 점유하고 있을 것이다.
+확인: docker ps를 통해 현재 8080 포트를 사용 중인 컨테이너 확인.
+해결: docker stop [컨테이너ID]로 기존 컨테이너를 중지하거나, 호스트 포트를 8081로 변경하여 실행함.
+
+추가로 포트 매핑 실패 시 진단 순서는 다음과 같다.
+1. 컨테이너 상태 확인: docker ps로 컨테이너가 Up 상태인지 확인.
+2. 포트 설정 확인: docker port [이름]으로 호스트와 컨테이너 포트가 제대로 연결되었는지 확인.
+3. 애플리케이션 로그 확인: docker logs [이름]을 통해 컨테이너 내부 서버(Nginx 등)가 정상적으로 켜졌는지 확인.
+4. 방화벽 및 로컬 접속 확인: 호스트 OS의 방화벽 설정이나 localhost 주소 오타 여부 확인.
