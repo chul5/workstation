@@ -4,6 +4,9 @@
 본 미션은 터미널, Docker, Git/GitHub을 활용하여 '내 컴퓨터에서만 돌아가는' 환경 문제를 방지하고, 팀원 누구나 동일한 방식으로 실행, 배포, 디버깅할 수 있는 **재현 가능한 개발 워크스테이션 구축**을 목표로 합니다. 리눅스 CLI 조작, 컨테이너 격리 원칙, 포트 매핑 및 데이터 영속성(Volume)의 핵심 흐름을 직접 검증하고 기록하였습니다.
 
 ### 1.1 프로젝트 디렉터리 구조
+1. Dockerfile 및 docker-compose.yml: 인프라 명세서로 프로젝트 루트에 배치하여 즉시 빌드 가능한 환경 구축.
+2. src/: 실제 서비스 코드를 격리하여 관리함으로써, 인프라 설정 변경이 소스 코드에 영향을 주지 않도록 구성.
+3. bindTest/ 및 image/: 검증용 데이터와 문서화 자료를 별도 폴더로 관리하여 프로젝트의 순수성을 유지.
 ```
 .
 ├── bindTest/          # 바인드 마운트 검증용 폴더
@@ -440,11 +443,11 @@ LABEL maintainer="cody"
 LABEL description="Custom Nginx Web Server for Mission"
 
 # 3. Host의 src폴더 안에 있는 index.html을 nginx컨테이너 웹 경로로 복사
-COPY /Users/och54055405/workstation/src/index.html /usr/share/nginx/html/index.html
+COPY src/index.html /usr/share/nginx/html/index.html
 ```
 #### dockerfile 빌드를 통한 커스텀 이미지 생성
-- 상대 경로: 프로젝트 내부 파일을 참조할 때 사용하며, 프로젝트 폴더 위치가 바뀌어도 동작해야 하므로 이식성이 높음 (예: $ docker build -t my-web-site:1.0 . )
-- 절대 경로: 시스템의 고정된 위치를 참조할 때나 Docker 실행 시 호스트의 전체 경로를 명시해야 할 때 사용함 (예: $ cp /Users/och54055405/workstation/src/index.html /usr/share/nginx/html/index.html).
+- 상대 경로 선택 기준: 프로젝트 내부의 자원을 참조할 때 사용함. 개발 환경이 Mac에서 Linux로 바뀌어도 프로젝트 폴더 내에서의 구조는 동일하므로 **'이식성'**과 **'재현성'**을 위해 반드시 상대 경로를 사용해야 함. (예: COPY src/index.html ...)
+- 절대 경로: 절대 경로 선택 기준: 호스트 시스템의 특정 위치를 컨테이너와 연결(Bind Mount)할 때 사용함. 실행 시점의 환경(컴퓨터 사용자명 등)에 따라 경로가 달라질 수 있으므로, 현재 위치를 나타내는 환경 변수($(pwd)) 등을 결합하여 명확한 위치를 지정해야 할 때 선택함.
 
 ```bash
 $ docker build -t my-web-site:1.0 .
@@ -526,7 +529,7 @@ $ curl localhost:8080
 <h1>Hello from Bind Mount!</h1>
 ```
 
-호스트 변경 후
+호스트 index.html 변경 후
 ```bash
 $ echo '<h1>Updated from Host!</h1>' > $(pwd)/bindTest/index.html
 $ curl localhost:8080
@@ -534,6 +537,36 @@ $ curl localhost:8080
 ```
 
 #### 2. Docker 볼륨 : 생성/연결/검증 + 컨테이너 삭제 전/후 비교
+만약, 컨테이너에 저장된 정보를 저장하지 않고 컨테이너를 삭제하면 데이터는 어떻게 되는가?
+결론부터 말하면 데이터도 함께 날아간다. 도커 볼륨은 컨테이너에서 발생하는 데이터를 저장할 때 사용하게 된다.
+
+##### 볼륨 매핑 전 데이터 영속성 테스트
+```bash
+$ docker run -d \
+  --name my-volume-beforeTest \
+  -p 8080:80 \
+  my-web-site:1.0
+$ curl localhost:8080
+<h1>Welcome to My Docker Station</h1><p>Created by [cody]</p>
+
+$ docker exec my-volume-beforeTest sh -c "
+  echo '<h1>Data Not in Volume</h1>' > /usr/share/nginx/html/index.html
+"
+
+$ curl localhost:8080                     
+<h1>Data Not in Volume</h1>
+
+$ docker stop my-volume-beforeTest
+$ docker rm my-volume-beforeTest
+$ docker run -d \
+  --name my-volume-beforeTest \
+  -p 8080:80 \
+  my-web-site:1.0
+$ curl localhost:8080
+<h1>Welcome to My Docker Station</h1><p>Created by [cody]</p>
+```
+
+##### 볼륨 매핑 후 데이터 영속성 테스트
 ```bash
 # 1. my-data-volume이름의 volume 생성
 $ docker volume create my-data-volume
@@ -608,13 +641,17 @@ branch.main.vscode-merge-base=origin/main
 1) GitHub Push 인증 오류 (Password Auth)
 
 문제: git push 시 비밀번호 인증 실패 (support for password authentication was removed).
+가설: 깃허브 비밀번호가 아닌 다른 수단으로 인증할 것이다.
 원인: GitHub 보안 정책으로 비밀번호 대신 PAT(Token) 사용이 필수임.
 해결: Settings > Developer settings에서 PAT(classic)를 생성하여 비밀번호 대신 입력함.
 
 2) docker port충돌 문제
 문제: docker run 실행 시 Bind for 0.0.0.0:8080 failed: port is already allocated 오류 발생.
 가설: 기존에 실행 중인 my-web 컨테이너가 8080 포트를 점유하고 있을 것이다.
-확인: docker ps를 통해 현재 8080 포트를 사용 중인 컨테이너 확인.
+확인: 
+1. docker ps를 통해 현재 8080 포트를 사용 중인 컨테이너 확인.
+2. 컨테이너 점유에서 찾을 수 없다면 OS레벨에서 `lsof -i :8080` 포트를 사용 중인 프로세스의 PID와 이름을 확인.
+3. `netstat -anp | grep 8080`: 네트워크 상태를 조회하여 해당 포트가 LISTEN 상태인지 확인.
 해결: docker stop [컨테이너ID]로 기존 컨테이너를 중지하거나, 호스트 포트를 8081로 변경하여 실행함.
 
 추가로 포트 매핑 실패 시 진단 순서는 다음과 같다.
