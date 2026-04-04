@@ -674,7 +674,30 @@ docker-compose.yml = 설정을 파일로 저장 → 재사용 가능, 팀과 공
 
 ##### docker-compose.yml
 ```bash
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    networks:
+      - app-network
 
+  db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_PASSWORD: password123
+    networks:
+      - app-network
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+networks:
+  app-network:
+
+volumes:
+  db-data:
 ```
 
 ##### Network 통신 확인
@@ -717,49 +740,152 @@ rtt min/avg/max/mdev = 0.048/0.050/0.051/0.001 ms
 서비스 디스커버리: db라는 이름으로 자동 DNS 해석
 같은 networks에 있으면 자동으로 통신 가능
 
-#### 3. Compost 운영 명령어
+#### 3. Compose 운영 명령어
 up, down, ps, logs를 사용해 실행/종료/상태/로그를 관리한다.
 배움 포인트: 운영 관점의 “상태 확인 루틴” 만들기
 
 ##### 명령어 정리
 ```bash
 # 1) 실행 (백그라운드)
-docker-compose up -d
+$ docker-compose up -d
 
 # 2) 상태 확인
-docker-compose ps
+$ docker-compose ps
+NAME                IMAGE                COMMAND                  SERVICE   CREATED         STATUS         PORTS
+workstation-db-1    postgres:13-alpine   "docker-entrypoint.s…"   db        4 seconds ago   Up 3 seconds   5432/tcp
+workstation-web-1   nginx:latest         "/docker-entrypoint.…"   web       3 seconds ago   Up 3 seconds   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
 
 # 3) 로그 확인
-docker-compose logs web          # web 서비스만
-docker-compose logs -f           # 실시간 로그 (Ctrl+C로 종료)
+$ docker-compose logs web          # web 서비스만
 ...
-web-1  | 2026/04/04 11:17:27 [notice] 1#1: start worker process 33
-web-1  | 2026/04/04 11:17:27 [notice] 1#1: start worker process 34
-web-1  | 2026/04/04 11:25:41 [notice] 1#1: signal 17 (SIGCHLD) received from 107
-web-1  | 2026/04/04 11:25:41 [notice] 1#1: unknown process 107 exited with code 0
+web-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+web-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+...
+
+$ docker-compose logs -f           # 실시간 로그 (Ctrl+C로 종료)
+...
+db-1  | 2026-04-04 11:17:34.912 UTC [1] LOG:  database system is ready to accept connections
+db-1  | 2026-04-04 11:24:08.576 UTC [67] LOG:  invalid length of startup packet
+web-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+web-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
 ...
 
 # 4) 특정 컨테이너 접속
-docker-compose exec db psql -U postgres
+$ docker-compose exec db psql -U postgres
 psql (13.23)
 Type "help" for help.
 
 postgres=#
 
 # 5) 종료 (컨테이너 삭제)
-docker-compose down
+$ docker-compose down
 
 # 6) 종료 (볼륨도 삭제)
-docker-compose down -v
+$ docker-compose down -v
+[+] Running 4/4
+ ✔ Container workstation-web-1      Removed                                                                                         0.4s 
+ ✔ Container workstation-db-1       Removed                                                                                         0.3s 
+ ✔ Volume workstation_db-data       Removed                                                                                         0.0s 
+ ✔ Network workstation_app-network  Removed
 ```
 
 #### 4. 환경 변수 활용
 Dockerfile 또는 Compose에서 환경 변수를 주입해 서버 포트/모드를 바꿔본다.
 배움 포인트: 설정과 코드의 분리
 
+##### .env파일에 포트, DB's USER/PW 분리
+```bash
+WEB_PORT=8080
+DB_PASSWORD=password123
+DB_USER=postgres
+```
+
+##### docker-compose.yml
+```bash
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "${WEB_PORT}:80"  # .env에서 읽음
+
+  db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+```
+
+##### Run
+```bash
+$ docker compose up -d
+[+] Running 3/3
+ ✔ Network workstation_default  Created                                                                 0.1s 
+ ✔ Container workstation-web-1  Started                                                                 0.5s 
+ ✔ Container workstation-db-1   Started                                                                 0.5s
+
+$ docker compose ps
+NAME                IMAGE                COMMAND                  SERVICE   CREATED              STATUS              PORTS
+workstation-db-1    postgres:13-alpine   "docker-entrypoint.s…"   db        About a minute ago   Up About a minute   5432/tcp
+workstation-web-1   nginx:latest         "/docker-entrypoint.…"   web       About a minute ago   Up About a minute   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+
+# 9090으로 .env의 PORT변경 후
+$ docker compose down
+$ docker compose up
+$ docker compose ps
+docker compose ps
+NAME                IMAGE                COMMAND                  SERVICE   CREATED          STATUS         PORTS
+workstation-db-1    postgres:13-alpine   "docker-entrypoint.s…"   db        14 seconds ago   Up 7 seconds   5432/tcp
+workstation-web-1   nginx:latest         "/docker-entrypoint.…"   web       14 seconds ago   Up 7 seconds   0.0.0.0:9090->80/tcp, [::]:9090->80/tcp
+```
+
+##### 핵심이해
+설정과 코드 분리 = 환경마다 다른 설정 가능
+개발/테스트/운영 환경에서 같은 yml 파일 사용 가능 -> yml을 수정하지 않아도 괜찮다.
+
 #### 5. Github SSH키 설정
 HTTPS 대신 SSH로 푸시가 가능하도록 키를 등록하고 동작을 확인한다.
 배움 포인트: 인증 방식 차이와 보안 습관
+
+##### SSH 키 생성
+ed25519 = 최신 암호화 방식 (RSA보다 안전, 빠름, 작음)
+```bash
+$ ssh-keygen -t ed25519 -C "och7164@gmail.com"
+# 파일명: id_ed25519 (기본값)
+# 비밀번호: 입력 (또는 엔터로 스킵)
+```
+
+##### 공개키 복사
+```bash
+$ cat ~/.ssh/id_ed25519.pub
+# 공개키 전체내용복사
+```
+##### Github 등록
+GitHub 로그인 → Settings → SSH and GPG keys → New SSH key
+복사한 공개키 붙여넣기 → Add SSH key
+
+##### 연결테스트
+```bash
+$ ssh -T git@github.com
+# yes 입력
+Hi chul5! You've successfully authenticated,
+
+$ git clone git@github.com:chul5/workstation.git dmddo
+Cloning into 'dmddo'...
+remote: Enumerating objects: 61, done.
+remote: Counting objects: 100% (61/61), done.
+remote: Compressing objects: 100% (44/44), done.
+remote: Total 61 (delta 24), reused 50 (delta 13), pack-reused 0 (from 0)
+Receiving objects: 100% (61/61), 1.07 MiB | 1.18 MiB/s, done.
+Resolving deltas: 100% (24/24), done.
+```
+##### 핵심이해
+1. SSH는 비대칭 암호화 방식사용.
+
+- 공개 키(Public Key): 누구나 봐도 상관없는 열쇠 구멍. (GitHub에 등록)
+- 개인 키(Private Key): 오직 내 컴퓨터에만 숨겨둔 진짜 열쇠.
+통신할 때마다 이 두 키가 맞는지 확인하므로, 중간에서 누군가 데이터를 가로채거나 계정 정보를 해킹하기가 훨씬 어렵습니다.
+
+2. 개발자가 직접 입력할 수 없는 **배포 서버(CI/CD)**나 자동화 스크립트 환경에서는 사람이 직접 비밀번호를 칠 수 없으므로 이때 SSH 키를 서버에 심어두면 안전하고 매끄럽게 소스 코드를 가져올 수 있다.
 
 ## 5. 트러블슈팅 (Troubleshooting)
 1) GitHub Push 인증 오류 (Password Auth)
