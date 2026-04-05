@@ -13,7 +13,9 @@
 ├── image/             # 프로젝트 실행 및 설정 증빙 스크린샷
 ├── src/               # 서비스 소스 코드 (index.html 등)
 ├── Dockerfile         # 컨테이너 빌드 스크립트
+├── docker-compose.yml # docker-compose 스크립트
 └── README.md          # 프로젝트 문서
+
 ```
 
 ## 2. 실행 환경
