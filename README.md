@@ -251,6 +251,9 @@ WARNING: DOCKER_INSECURE_NO_IPTABLES_RAW is set
 - 이미지 vs 컨테이너 차이
    - 이미지(Image): 서비스 실행에 필요한 모든 파일과 설정을 압축한 '불변의 설계도(Read-Only)'.
    - 컨테이너(Container): 이미지를 실행한 '격리된 프로세스'. 컨테이너에서 변경된 사항은 이미지에 영향을 주지 않음.
+- docker는 왜 쓸까?
+   - "내 컴퓨터에선 되는데 서버에선 왜 안 되지?" 상황을 방지하기 위해서
+
 ```bash
 # 1. docker pull
 $ docker pull nginx
@@ -667,6 +670,12 @@ $ docker compose down
 docker run 명령 = 매번 길게 입력해야 함
 docker-compose.yml = 설정을 파일로 저장 → 재사용 가능, 팀과 공유 가능
 
+
+- Dockerfile: "이미지를 만들기 위한 레시피입니다. 애플리케이션 실행에 필요한 환경(OS, 소스코드, 패키지 설치 등)을 한 줄씩 기록합니다."(개별 요리를 만드는 상세 조리법)
+
+- docker-compose: "여러 개의 컨테이너를 정의하고 한꺼번에 실행/관리하는 설정 파일(yaml)입니다. DB, 웹서버 등을 묶어서 관리합니다."(여러 요리가 나오는 코스 요리 메뉴판)
+
+
 #### 2. Docker compost Multi Containers
 웹 서버 + (임의의 보조 서비스) 2개 이상을 Compose로 함께 실행한다.
 컨테이너 간 네트워크 통신이 가능한지 확인한다.
@@ -852,6 +861,10 @@ ed25519 = 최신 암호화 방식 (RSA보다 안전, 빠름, 작음)
 $ ssh-keygen -t ed25519 -C "och7164@gmail.com"
 # 파일명: id_ed25519 (기본값)
 # 비밀번호: 입력 (또는 엔터로 스킵)
+# -t 생성할 키의 알고리즘 지정
+# -C 생성할 키의 주석 지정
+# SSH키 쌍(비밀키, 공개키)를 생성할 때 사용
+
 ```
 
 ##### 공개키 복사
@@ -864,12 +877,16 @@ GitHub 로그인 → Settings → SSH and GPG keys → New SSH key
 복사한 공개키 붙여넣기 → Add SSH key
 
 ##### 연결테스트
+GitHub와 SSH 연결이 잘 되는지 테스트. -T 옵션은 의사 터미널 할당하지 않겠다는 뜻. 즉, 단순 연결 확인만 하겠다는 뜻.
+
 ```bash
 $ ssh -T git@github.com
+
 # yes 입력
 Hi chul5! You've successfully authenticated,
 
-$ git clone git@github.com:chul5/workstation.git dmddo
+$ git clone git@github.com:chul5/
+workstation.git dmddo
 Cloning into 'dmddo'...
 remote: Enumerating objects: 61, done.
 remote: Counting objects: 100% (61/61), done.
